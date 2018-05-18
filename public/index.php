@@ -22,7 +22,7 @@ if (file_exists(VENDORDIR . "autoload.php")) {
     die("<pre>Run 'composer.phar install' in root dir</pre>");
 }
 
-$config = require_once (SRCDIR . 'config.php');              // 引用配置文件
+$config = require_once(ROOT . '/config/config.php');              // 引用配置文件
 
 $app = new \Slim\App($config);
 
