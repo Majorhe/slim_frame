@@ -25,7 +25,7 @@ class IndexController
     public function home(Request $request, Response $response, $args)
     {
         return $this->container->view->render($response, '/application/index.twig', [
-            'name' => '123456rdghf'
+            'title' => 'test nginx proxy!'
         ]);
     }
 
