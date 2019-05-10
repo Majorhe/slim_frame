@@ -1,4 +1,21 @@
-vendor/
+
+#IOS系统文件
+.DS_Store
+
+# IDE Files
+.idea/*
+.settings/*
+
+# 忽略自动发布198的脚本文件
+autoSync.sh
+
+#项目忽略文件
+dev/*
+vendor/*
 composer.lock
-.idea/
-/src/cache/
+logs/*
+caches/*
+configs/config.php
+
+
+

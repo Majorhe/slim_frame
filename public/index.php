@@ -1,61 +1,26 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: shasnhanpc
- * Date: 2018/5/14
- * Time: 11:21
- */
-define("DS", DIRECTORY_SEPARATOR);
-define("ROOT", realpath(dirname(__DIR__)) . DS);
-define("VENDORDIR", ROOT . "vendor" . DS);
-define("SRCDIR", ROOT . "src" . DS);
-define("ROUTEDIR", ROOT . "src" . DS . "routes" . DS);
-define("TEMPLATEDIR", ROOT . "templates" . DS);
-define("LANGUAGEDIR", ROOT . "languages" . DS);
 
-date_default_timezone_set("Asia/Shanghai");
+    define('ROOT_DIR',dirname(realpath(__DIR__)) . DIRECTORY_SEPARATOR);
 
-// 引用autoload文件
-if (file_exists(VENDORDIR . "autoload.php")) {
-    require_once VENDORDIR . "autoload.php";
-} else {
-    die("<pre>Run 'composer.phar install' in root dir</pre>");
-}
+    define('SRC_DIR', ROOT_DIR . 'src' . DIRECTORY_SEPARATOR);
 
-$config = require_once(ROOT . '/config/config.php');              // 引用配置文件
+    define('CONFIG_DIR', ROOT_DIR . 'configs' . DIRECTORY_SEPARATOR);
 
-$app = new \Slim\App($config);
+    define('LOGS_DIR', ROOT_DIR . 'logs' . DIRECTORY_SEPARATOR);
 
-// Get container
-$container = $app->getContainer();
+    define('CACHES_DIR', ROOT_DIR . 'caches' . DIRECTORY_SEPARATOR);
 
-// Register Twig View helper
-$container['view'] = function ($c) {
-    $view = new \Slim\Views\Twig(SRCDIR . 'templates', [
-//        'cache' => SRCDIR . 'cache'
-    ]);
+    define('ROUTER_DIR', ROOT_DIR . 'router' . DIRECTORY_SEPARATOR);
 
-    // Instantiate and add Slim specific extension
-    $router = $c->get('router');
-    $uri = \Slim\Http\Uri::createFromEnvironment(new \Slim\Http\Environment($_SERVER));
-    $view->addExtension(new \Slim\Views\TwigExtension($router, $uri));
+    define('PUBLIC_DIR', ROOT_DIR . 'public' . DIRECTORY_SEPARATOR);
 
-    return $view;
-};
+    date_default_timezone_set('PRC');
 
-// Service factory for the ORM
-$container['db'] = function ($container) use ($config) {
-    $capsule = new \Illuminate\Database\Capsule\Manager;
-    $capsule->addConnection($config['settings']['db']);
-    $capsule->setAsGlobal();
-    $capsule->bootEloquent();
+    if( ! file_exists(ROOT_DIR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php')) {
+        throw new RuntimeException('Run \'composer.phar install\' in root dir');
+    }
 
-    return $capsule;
-};
+    require_once ROOT_DIR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
 
+    require_once CONFIG_DIR . 'bootstrap.php';
 
-require_once (SRCDIR . 'routes' . DS . 'api.php');  // 引用api路由文件
-
-require_once (SRCDIR . 'routes' . DS . 'web.php');  // 引用前端路由文件
-
-$app->run();
