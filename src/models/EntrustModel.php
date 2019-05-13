@@ -3,6 +3,8 @@
 namespace models;
 
 
+use units\AppUnits;
+
 /**
  * Class EntrustModel
  * @package models
@@ -17,6 +19,8 @@ namespace models;
  *
  * @method getCarList(array $params) { v1.0.1 获取同一批次的悬赏车辆列表 }
  *
+ * @method batchImport(array $params) { v1.0.1 批量导入委案 }
+ *
  */
 class EntrustModel extends BaseModel
 {
@@ -26,7 +30,8 @@ class EntrustModel extends BaseModel
         'getEntrustInfo'  => 'car-service/carEntrust/info',
         'checkPermission' => 'car-service/fundProvider/havePermission',
         'getHistoryList'  => 'car-service/carEntrustBatch/list',
-        'getCarList'      => '',
+        'getCarList'      => 'car-service/carEntrustBatch/carList',
+        'batchImport'     => 'car-service/carEntrust/batchImport'
     ];
 
     public $entrustFileTitle = [
@@ -154,10 +159,10 @@ class EntrustModel extends BaseModel
             $msg = [];
             $flag = false;
             for ($j = 'A'; $j != $cols; $j++) {
+                $temp[$this->entrustFileTitle[$j]['fieldName']] = trim($sheet->getCell($j . $i)->getValue());
                 switch ($j) {
                     case 'A':
                         // 资方判断
-                        $temp['carFundProvider'] = trim($sheet->getCell($j . $i)->getValue());
                         if (empty($temp['carFundProvider'])) {
                             $flag = true;
                             $msg[] = '资方名称不能为空';
@@ -165,34 +170,70 @@ class EntrustModel extends BaseModel
                         break;
                     case 'B':
                         // 车牌号校验
-                        $temp['carNo'] = trim($sheet->getCell($j . $i)->getValue());
                         if (empty($temp['carNo'])) {
                             $flag = true;
                             $msg[] = '车牌号不能为空';
                             break;
                         }
-                        if (true) {
-
+                        if (!AppUnits::carNoValidator($temp['carNo'])) {
+                            $flag = true;
+                            $msg[] = '车牌号不合法';
+                            break;
                         }
                         break;
                     case 'C':
+                        // 车架号校验
+                        if (empty($temp['carFrameNo'])) {
+                            $flag = true;
+                            $msg[] = '车架号不能为空';
+                            break;
+                        }
+                        if (!AppUnits::carFrameValidator($temp['carFrameNo'])) {
+                            $flag = true;
+                            $msg[] = '车架号不合法';
+                            break;
+                        }
                         break;
                     case 'D':
+                        // 逾期天数校验
+                        if (empty($temp['expireDays'])) {
+                            $flag = true;
+                            $msg[] = '逾期天数不能为空';
+                            break;
+                        }
+                        if (!is_numeric($temp['expireDays']) || intval($temp['expireDays']) < 0 || intval($temp['expireDays']) > 9999) {
+                            $flag = true;
+                            $msg[] = '逾期天数必须是数字且不能超过9999天';
+                            break;
+                        }
                         break;
                     case 'E':
+                        // 委托金额检验
+                        if (empty($temp['entrustPrice'])) {
+                            $flag = true;
+                            $msg[] = '委托金额不能为空';
+                            break;
+                        }
+                        if (!is_numeric($temp['entrustPrice']) || floatval($temp['entrustPrice']) < 0) {
+                            $flag = true;
+                            $msg[] = '委托金额必须是数字且不能小于0元';
+                            break;
+                        }
                         break;
                     default:
                         break;
-
                 }
             }
 
             if ($flag) {
+                $temp['reason'] = implode(',', $msg);
                 $invalidData[] = $temp;
             } else {
                 $validData[] = $temp;
             }
         }
+
+        return ['success' => true, 'data' => ['validData' => $validData, 'invalidData' => $invalidData]];
     }
 
 
@@ -208,6 +249,10 @@ class EntrustModel extends BaseModel
      */
     public function writerExcel(array $listData, $filename = null)
     {
+        if (empty($listData)) {
+            return ['success' => false, 'msg' => '数据不能为空'];
+        }
+
         $objPHPExcel = new \PHPExcel();
 
         // 设置sheet名称

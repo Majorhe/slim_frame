@@ -242,7 +242,13 @@ class AppUnits
     }
 
 
-    public function carNoValidator($carNo)
+    /**
+     * 车牌号正则校验
+     *
+     * @param $carNo
+     * @return bool
+     */
+    public static function carNoValidator($carNo)
     {
         if (empty($carNo)) {
             return false;
@@ -282,4 +288,27 @@ class AppUnits
         return false;
     }
 
+    /**
+     * 车架号正则校验
+     *
+     * @param $carFrame
+     * @return bool
+     */
+    public static function carFrameValidator($carFrame)
+    {
+        if (empty($carFrame)) {
+            return false;
+        }
+
+        if (strlen($carFrame) !== 17) {
+            return false;
+        }
+
+        $regular = "/[a-zA-Z0-9]{17}$/u";
+        preg_match($regular, $carFrame, $match);
+        if (isset($match[0])) {
+            return true;
+        }
+        return false;
+    }
 }
