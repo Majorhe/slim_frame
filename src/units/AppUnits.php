@@ -254,7 +254,7 @@ class AppUnits
             return false;
         }
 
-        if (strlen($carNo) > 8 || strlen($carNo) < 7) {
+        if (mb_strlen($carNo, 'UTF8') > 8 || mb_strlen($carNo, 'UTF8') < 7) {
             return false;
         }
         /**
@@ -310,5 +310,125 @@ class AppUnits
             return true;
         }
         return false;
+    }
+
+    /**
+     * 生产随机数
+     *
+     * @param int $len
+     * @return string
+     */
+    public static function rand_str($len = 4)
+    {
+        $chars = array(
+            "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k",
+            "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v",
+            "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G",
+            "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R",
+            "S", "T", "U", "V", "W", "X", "Y", "Z", "0", "1", "2",
+            "3", "4", "5", "6", "7", "8", "9"
+        );
+
+        $charsLen = count($chars) - 1;
+        shuffle($chars);                            //打乱数组顺序
+        $str = '';
+        for($i=0; $i < $len; $i++){
+            $str .= $chars[mt_rand(0, $charsLen)];    //随机取出一位
+        }
+        return $str;
+    }
+
+
+    /**
+     * 将车辆状态转换为悬赏状态和委案状态
+     *
+     * 车辆状态：1--已委托， 2--申请中，3--执行中，4--已撤销，5--已完成，6--委托失败
+     * 悬赏状态：8--待分析， 0---待发布， 1---已发布， 2---申请中， 3----已授权，  4---可执行， 7---待确认， 9---待付款， 10---待回款， 5---已完成， 6---已失效， 11---已委托
+     * 委案状态：1--为已委托， 2--为委托失败， 3--为已激活， 4--为激活失败
+     *
+     * @param $carStatus
+     * @return array
+     */
+    public static function convertCarStatus2rewardStatus($carStatus)
+    {
+        if (empty($carStatus)) {
+            return [];
+        }
+
+        $status = explode(',', $carStatus);
+
+        $rewardStatus = $entrustStatus = [];
+
+        foreach ($status as $state) {
+            switch (intval($state)) {
+                case 1:
+                    array_push($rewardStatus, 11, 8, 0, 1);
+                    array_push($entrustStatus, 1, 3);
+                    break;
+                case 2:
+                    $rewardStatus[] = 2;
+                    break;
+                case 3:
+                    array_push($rewardStatus, 3, 4, 7, 9, 10);
+                    break;
+                case 4:
+                    $rewardStatus[] = 6;
+                    break;
+                case 5:
+                    $rewardStatus[] = 5;
+                    break;
+                case 6:
+                    array_push($entrustStatus, 2,4);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        return ['rewardStatus' => implode(',', $rewardStatus), 'entrustStatus' => implode(',', $entrustStatus)];
+    }
+
+
+    /**
+     * 将悬赏状态和委案状态转换为车辆状态
+     *
+     * @param $rewardStatus
+     * @param $entrustStatus
+     * @return int
+     */
+    public static function convertRewardStatus2carStatus($rewardStatus, $entrustStatus)
+    {
+        if ((empty($rewardStatus) && intval($rewardStatus) !== 0) || empty($entrustStatus)) {
+            return 0;
+        }
+
+        // 已委托
+        if ($entrustStatus == 1 || $entrustStatus == 3) {
+            // 已委托
+            if (in_array($rewardStatus, [11, 8, 0, 1])) {
+                return 1;
+            }
+            // 申请中
+            if ($rewardStatus == 2) {
+                return 2;
+            }
+            // 执行中
+            if (in_array($rewardStatus, [3, 4, 7, 9, 10])) {
+                return 3;
+            }
+            // 已撤销
+            if ($rewardStatus == 6) {
+                return 4;
+            }
+            // 已完成
+            if ($rewardStatus == 5) {
+                return 5;
+            }
+        }
+
+        // 委托失败
+        if ($entrustStatus == 2 || $entrustStatus == 4) {
+            return 6;
+        }
     }
 }

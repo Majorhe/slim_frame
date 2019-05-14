@@ -19,6 +19,7 @@ class EntrustController
      *
      * @param pageSize      每页显示条数
      * @param pageNum       当前页数
+     * @param status        车辆状态：   1--已委托， 2--申请中，3--执行中，4--已撤销，5--已完成，6--委托失败
      * @param search        搜索关键字
      * @param orderField    排序字段： entrustPrice（委托金额）， expireDays（逾期天数）， addTime（发布时间）
      * @param orderRule     排序规则：1为正序 2为倒叙
@@ -28,69 +29,6 @@ class EntrustController
     public function entrustList(Request $request, Response $response)
     {
         try {
-
-            $listData = [
-                "arrays" => [
-                    [
-                        "carEntrustId"=>"fd64f4as6df749a68d4",
-                        "carFundProvider"=>"一嗨",
-                        "carNo"=>"浙J12345",
-                        "carFrameNo"=>"abcefg",
-                        "expireDays"=>"32",
-                        "entrustPrice"=>1234,
-                        "gpsStatus"=>1,
-                        "addTime"=>145678765432,
-                        "addManger"=>"admin123",
-                        "carOwnerName"=>"张三",
-                        "carOwnerPhone"=>"18769265916",
-                        "carOwnerIdno"=>"7228261889327492",
-                        "carBrand"=>"雪弗兰",
-                        "carColor" => "black"
-                    ],
-                    [
-                        "carEntrustId"=>"fd64f4as6df749a68d4",
-                        "carFundProvider"=>"一嗨",
-                        "carNo"=>"浙J12345",
-                        "carFrameNo"=>"abcefg",
-                        "expireDays"=>"32",
-                        "entrustPrice"=>1234,
-                        "gpsStatus"=>1,
-                        "addTime"=>145678765432,
-                        "addManger"=>"admin123",
-                        "carOwnerName"=>"张三",
-                        "carOwnerPhone"=>"18769265916",
-                        "carOwnerIdno"=>"7228261889327492",
-                        "carBrand"=>"雪弗兰",
-                        "carColor" => "black"
-                    ],
-                    [
-                        "carEntrustId"=>"fd64f4as6df749a68d4",
-                        "carFundProvider"=>"一嗨",
-                        "carNo"=>"浙J12345",
-                        "carFrameNo"=>"abcefg",
-                        "expireDays"=>"32",
-                        "entrustPrice"=>1234,
-                        "gpsStatus"=>1,
-                        "addTime"=>145678765432,
-                        "addManger"=>"admin123",
-                        "carOwnerName"=>"张三",
-                        "carOwnerPhone"=>"18769265916",
-                        "carOwnerIdno"=>"7228261889327492",
-                        "carBrand"=>"雪弗兰",
-                        "carColor" => "black"
-                    ]
-                ],
-                "page" => [
-                    "currentPage"=> 1,
-                    "pages"=> 120,
-                    "perNum"=> 10,
-                    "total"=> 1196
-                ]
-            ];
-
-            return $response->withJson(AppUnits::rtnMsg(200, null, $listData));
-
-
             $params = AppUnits::paramsFilter(AppUnits::decryptWithOpenssl($request->getParam('contents')));
 
             $params = array_merge(['pageSize' => 10, 'pageNum' => 1], $params);
@@ -105,12 +43,25 @@ class EntrustController
                 }
             }
 
+            if (isset($params['status'])) {
+                if ($params['status'] != -2) {
+                    $params = array_merge(AppUnits::convertCarStatus2rewardStatus($params['status']), $params);
+                }
+                unset($params['status']);
+            }
+
             $entrustModel = new EntrustModel();
 
             $listData = $entrustModel->getEntrustList($params);
 
             if (isset($listData['error'])) {
                 return $response->withJson(AppUnits::rtnMsg(201, $listData['error']));
+            }
+
+            if (empty($listData['arrays'])) {
+                foreach ($listData['arrays'] as $index => $entrust) {
+                    $listData['arrays'][$index]['carStatus'] = AppUnits::convertRewardStatus2carStatus($entrust['carRewardStatus'], $entrust['status']);
+                }
             }
 
             return $response->withJson(AppUnits::rtnMsg(200, null, $listData));
@@ -130,20 +81,6 @@ class EntrustController
     public function detail(Request $request, Response $response)
     {
         try {
-            $data = [
-                "expireDays" => 32,
-                "entrustPrice" => 213,
-                "gpsStatus" => 1,
-                "gpsTypes" =>  "www.gpsLoginType.com",
-                "gpsAccount" =>  "1762891024",
-                "gpsPasswd" =>  "1234sun",
-                "deliveryPlace" =>  "浙江",
-                "remark" =>  "ememememem"
-            ];
-
-            return $response->withJson(AppUnits::rtnMsg(200, null, $data));
-
-
             $params = AppUnits::paramsFilter(AppUnits::decryptWithOpenssl($request->getParam('contents')));
 
             if (!isset($params['carEntrustId']) || empty($params['carEntrustId'])) {
@@ -199,7 +136,7 @@ class EntrustController
                     if (!$result['success']) {
                         return $response->withJson(AppUnits::rtnMsg(201, $result['msg']));
                     }
-                    return $response->withJson(AppUnits::rtnMsg(201, null, $result['data']));
+                    return $response->withJson(AppUnits::rtnMsg(200, null, $result['data']));
 
                 case 2:
                     // 数据验证
@@ -218,21 +155,24 @@ class EntrustController
                     }
 
                     if (!empty($data['data']['validData'])) {
-                        $result = $entrustModel->batchImport($data['data']['validData']);
+                        $result = $entrustModel->setPost()->batchImport(['model' => $data['data']['validData'], 'types' => $params['types']]);
 
                         if (isset($result['error'])) {
                             return $response->withJson(AppUnits::rtnMsg(201, $result['error']));
                         }
                     }
 
-                    $responseData = ['successTotal' => count($data['data']['invalidData']), 'failureTotal' => count($data['data']['invalidData'])];
+                    $responseData = ['successTotal' => count($data['data']['validData']), 'failureTotal' => count($data['data']['invalidData'])];
 
                     if (!empty($data['data']['invalidData'])) {
-                        $result = $entrustModel->writerExcel($data['data']['invalidData']);
+                        $filename = isset($result['batch']) ? $result['batch'] . '.xlsx' : date('YmdHis') . AppUnits::rand_str() . '.xlsx';
+                        $result = $entrustModel->writerExcel($data['data']['invalidData'], $filename, 'import_failure');
                         if ($result['success']) {
                             $responseData['url'] = $result['data']['url'];
                         }
                     }
+
+                    sleep(10);
 
                     return $response->withJson(AppUnits::rtnMsg(200, '', $responseData));
 
@@ -328,12 +268,25 @@ class EntrustController
                 }
             }
 
+            if (isset($params['status'])) {
+                if ($params['status'] != -2) {
+                    $params = array_merge(AppUnits::convertCarStatus2rewardStatus($params['status']), $params);
+                }
+                unset($params['status']);
+            }
+
             $entrustModel = new EntrustModel();
 
             $listData = $entrustModel->getCarList($params);
 
             if (isset($listData['error'])) {
                 return $response->withJson(AppUnits::rtnMsg(201, $listData['error']));
+            }
+
+            if (empty($listData['list'])) {
+                foreach ($listData['list'] as $index => $entrust) {
+                    $listData['list'][$index]['carStatus'] = AppUnits::convertRewardStatus2carStatus($entrust['carRewardStatus'], $entrust['entrustStatus']);
+                }
             }
 
             return $response->withJson(AppUnits::rtnMsg(200, null, $listData));
@@ -355,10 +308,11 @@ class EntrustController
         try {
             $params = AppUnits::paramsFilter(AppUnits::decryptWithOpenssl($request->getParam('contents')));
 
-
             if (!isset($params['carEntrustBatchId']) || empty($params['carEntrustBatchId'])) {
                 return $response->withJson(AppUnits::rtnMsg(201, '委案批次ID不能为空'));
             }
+
+            $params['pageSize'] = 1000000;
 
             $entrustModel = new EntrustModel();
 
@@ -368,13 +322,71 @@ class EntrustController
                 return $response->withJson(AppUnits::rtnMsg(201, $listData['error']));
             }
 
-            $result = $entrustModel->writerExcel($listData);
+            $result = $entrustModel->writerExcel($listData['list']);
 
             if (!$result['success']) {
                 return $response->withJson(AppUnits::rtnMsg(201, $result['msg']));
             }
 
             return $response->withJson(AppUnits::rtnMsg(200, null, $result['data']));
+        } catch (\Exception $e) {
+            return $response->withJson(AppUnits::rtnMsg(201, $e->getMessage()));
+        }
+    }
+
+
+    /**
+     * 委案审批详情
+     *
+     * @param Request $request
+     * @param Response $response
+     *
+     * @param carEntrustBatchId     委托批次ID
+     * @param pageSize              每页显示条数
+     * @param pageNum               当前页数
+     * @param search                搜索关键字
+     * @param rewardStatus          车辆状态（多选）：8--待分析， 0--待发布， 1--已发布， 2--申请中， 3--已授权， 4--可执行， 7--待确认， 9--待付款， 10--待回款， 5--已完成， 6--已失效， 11--已委托, 多个状态用逗号隔开
+     * @param entrustStatus         委案状态（单选）：1--为已委托， 2--为委托失败， 3--为已激活， 4--为激活失败
+     * @param gpsStatus             GPS状态（单选）：0--为无效， 1--为有效
+     * @param assetsType            资产类型（多选）：
+     * @param isProviderGpsUserful  贴G状态（单选）：1--为无效， 2--为有效
+     *
+     * @return Response
+     */
+    public function approvalDetail(Request $request, Response $response)
+    {
+        try {
+            $params = AppUnits::paramsFilter(AppUnits::decryptWithOpenssl($request->getParam('contents')));
+
+
+            if (!isset($params['carEntrustBatchId']) || empty($params['carEntrustBatchId'])) {
+                return $response->withJson(AppUnits::rtnMsg(201, '委案批次ID不能为空'));
+            }
+
+            $params = array_merge(['pageSize' => 10, 'pageNum' => 1], $params);
+
+            if (isset($params['status'])) {
+                if ($params['status'] != -2) {
+                    $params = array_merge(AppUnits::convertCarStatus2rewardStatus($params['status']), $params);
+                }
+                unset($params['status']);
+            }
+
+            $entrustModel = new EntrustModel();
+
+            $listData = $entrustModel->approvalDetail($params);
+
+            if (isset($listData['error'])) {
+                return $response->withJson(AppUnits::rtnMsg(201, $listData['error']));
+            }
+
+            if (empty($listData['list'])) {
+                foreach ($listData['list'] as $index => $entrust) {
+                    $listData['list'][$index]['carStatus'] = AppUnits::convertRewardStatus2carStatus($entrust['carRewardStatus'], $entrust['entrustStatus']);
+                }
+            }
+
+            return $response->withJson(AppUnits::rtnMsg(200, null, $listData));
         } catch (\Exception $e) {
             return $response->withJson(AppUnits::rtnMsg(201, $e->getMessage()));
         }

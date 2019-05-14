@@ -36,6 +36,8 @@
             // 委托审批列表
             $app->get('/approvalList', \controller\admin\EntrustController::class . ':historyList')->setName('admin/entrustApprovalList');
 
+            // 委托审批详情
+            $app->get('/approvalDetail', \controller\admin\EntrustController::class . ':approvalDetail')->setName('admin/entrustApprovalDetail');
 
         });
 

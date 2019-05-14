@@ -21,6 +21,10 @@ use units\AppUnits;
  *
  * @method batchImport(array $params) { v1.0.1 批量导入委案 }
  *
+ * @method approvalDetail(array $params) { v1.0.1 委案审批详情 }
+ *
+ * @method fundHaveActiveContract(array $params) { v1.0.1 资方是否存在激活的合同 （价格管理系统接口 12） }
+ *
  */
 class EntrustModel extends BaseModel
 {
@@ -31,7 +35,9 @@ class EntrustModel extends BaseModel
         'checkPermission' => 'car-service/fundProvider/havePermission',
         'getHistoryList'  => 'car-service/carEntrustBatch/list',
         'getCarList'      => 'car-service/carEntrustBatch/carList',
-        'batchImport'     => 'car-service/carEntrust/batchImport'
+        'batchImport'     => 'car-service/carEntrust/batchImport',
+        'approvalDetail'  => 'car-service/carEntrust/carList',
+        'fundHaveActiveContract' => 'price-service/contract/haveActiveContract'
     ];
 
     public $entrustFileTitle = [
@@ -51,7 +57,7 @@ class EntrustModel extends BaseModel
         'N' => ['fieldName' => 'gpsPasswd', 'title' => 'GPS登录密码'],
         'O' => ['fieldName' => 'deliveryPlace', 'title' => '交车地点'],
         'P' => ['fieldName' => 'remark', 'title' => '备注'],
-        'Q' => ['fieldName' => 'reason', 'title' => '失败原因']
+        'Q' => ['fieldName' => 'failureReason', 'title' => '失败原因']
     ];
 
     public function __construct()
@@ -76,7 +82,7 @@ class EntrustModel extends BaseModel
         }
 
         // 设置上传的文件保存路径
-        $filePath = ROOT . 'public/temp_file/';
+        $filePath = PUBLIC_DIR . 'temp_file/';
         if (!is_dir($filePath)) {
             mkdir($filePath, 0766);
         }
@@ -119,17 +125,26 @@ class EntrustModel extends BaseModel
         }
 
         // 校验用户是否有操作资方的权限
-        $result = $this->checkPermission(['fundName' => $fundProvider]);
-
-        if (isset($result['error'])) {
-            return ['success' => false, 'msg' => $result['error']];
-        }
-
-        if (!$result['havePermission']) {
-            return ['success' => false, 'msg' => '导入失败！您没有权限上传' . $fundProvider . '资方委案！'];
-        }
+//        $result = $this->checkPermission(['fundName' => $fundProvider]);
+//
+//        if (isset($result['error'])) {
+//            return ['success' => false, 'msg' => $result['error']];
+//        }
+//
+//        if (!$result['havePermission']) {
+//            return ['success' => false, 'msg' => '导入失败！您没有权限上传' . $fundProvider . '资方委案！'];
+//        }
 
         // 校验资方是否有激活的合同
+//        $result = $this->fundHaveActiveContract(['fundProviderId' => $result['fundId']]);
+//
+//        if (isset($result['error'])) {
+//            return ['success' => false, 'msg' => $result['error']];
+//        }
+//
+//        if (!$result['result']) {
+//            return ['success' => false, 'msg' => '该资方没有激活的合同'];
+//        }
 
 
         return ['success' => true, 'data' => ['filename' => $newFilename]];
@@ -140,13 +155,14 @@ class EntrustModel extends BaseModel
      * 校验委案数据
      *
      * @param $filename
+     * @return array
      * @throws \PHPExcel_Exception
      * @throws \PHPExcel_Reader_Exception
      */
     public function checkEntrustData($filename)
     {
         // 使用phpexcel获取excel文件信息
-        $filePath = ROOT . 'public/temp_file/' . $filename;
+        $filePath = PUBLIC_DIR . 'temp_file/' . $filename;
         $excelReader = \PHPExcel_IOFactory::createReaderForFile($filePath);
         $excelObj = $excelReader->load($filePath);
         $sheet = $excelObj->getSheet(0);
@@ -158,7 +174,7 @@ class EntrustModel extends BaseModel
             $temp = [];
             $msg = [];
             $flag = false;
-            for ($j = 'A'; $j != $cols; $j++) {
+            for ($j = 'A'; $j <= $cols; $j++) {
                 $temp[$this->entrustFileTitle[$j]['fieldName']] = trim($sheet->getCell($j . $i)->getValue());
                 switch ($j) {
                     case 'A':
@@ -226,7 +242,7 @@ class EntrustModel extends BaseModel
             }
 
             if ($flag) {
-                $temp['reason'] = implode(',', $msg);
+                $temp['failureReason'] = implode(',', $msg);
                 $invalidData[] = $temp;
             } else {
                 $validData[] = $temp;
@@ -242,12 +258,13 @@ class EntrustModel extends BaseModel
      *
      * @param array $listData
      * @param null $filename
+     * @param null $dir
      * @return array
      * @throws \PHPExcel_Exception
      * @throws \PHPExcel_Reader_Exception
      * @throws \PHPExcel_Writer_Exception
      */
-    public function writerExcel(array $listData, $filename = null)
+    public function writerExcel(array $listData, $filename = null, $dir = null)
     {
         if (empty($listData)) {
             return ['success' => false, 'msg' => '数据不能为空'];
@@ -271,24 +288,6 @@ class EntrustModel extends BaseModel
             foreach ($cols as $col) {
                 $objPHPExcel->getActiveSheet()->setCellValue($col . $index, $data[$this->entrustFileTitle[$col]['fieldName']]);
             }
-
-//            $objPHPExcel->getActiveSheet()->setCellValue('A' . $index, $data['carFundProvider']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('B' . $index, $data['carNo']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('C' . $index, $data['carFrameNo']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('D' . $index, $data['expireDays']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('E' . $index, number_format($data['entrustPrice'], 2, '.', ','));
-//            $objPHPExcel->getActiveSheet()->setCellValue('F' . $index, $data['carOwnerName']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('G' . $index, $data['carOwnerIdno']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('H' . $index, $data['carOwnerPhone']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('I' . $index, $data['carBrand']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('J' . $index, $data['carColor']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('K' . $index, $data['gpsStatus']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('L' . $index, $data['gpsTypes']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('M' . $index, $data['gpsAccount']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('N' . $index, $data['gpsPasswd']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('O' . $index, $data['deliveryPlace']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('P' . $index, $data['remark']);
-//            $objPHPExcel->getActiveSheet()->setCellValue('Q' . $index, $data['reason']);
         }
 
         // 创建excel
@@ -299,7 +298,8 @@ class EntrustModel extends BaseModel
         $objWrite = \PHPExcel_IOFactory::createWriter($objPHPExcel, 'Excel2007');
 
         // 设置上传的文件保存路径
-        $_savePath = ROOT . 'public/temp_file/';
+        $dir = empty($dir) ? 'temp_file/' : $dir . '/';
+        $_savePath = PUBLIC_DIR . $dir;
         if (!is_dir($_savePath)) {
             mkdir($_savePath, 0766);
         }
@@ -313,6 +313,6 @@ class EntrustModel extends BaseModel
 
         $http_type = ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] == 'on') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https')) ? 'https://' : 'http://';
 
-        return ['success' => true, 'data' => ['url' => $http_type . $_SERVER('HTTP_HOST') . '/temp_file/' . $filename]];
+        return ['success' => true, 'data' => ['url' => $http_type . $_SERVER['HTTP_HOST'] . '/' . $dir . '/' . $filename]];
     }
 }
