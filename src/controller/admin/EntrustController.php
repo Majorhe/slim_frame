@@ -34,7 +34,7 @@ class EntrustController
             $params = array_merge(['pageSize' => 10, 'pageNum' => 1], $params);
 
             if (isset($params['orderField']) && isset($params['orderRule'])) {
-                if (!in_array($params['orderField'], ['entrust_price（', 'expire_days', 'add_time'])) {
+                if (!in_array($params['orderField'], ['entrust_price', 'expire_days', 'add_time'])) {
                     return $response->withJson(AppUnits::rtnMsg(201, '排序参数错误'));
                 }
 
@@ -58,7 +58,7 @@ class EntrustController
                 return $response->withJson(AppUnits::rtnMsg(201, $listData['error']));
             }
 
-            if (empty($listData['arrays'])) {
+            if (!empty($listData['arrays'])) {
                 foreach ($listData['arrays'] as $index => $entrust) {
                     $listData['arrays'][$index]['carStatus'] = AppUnits::convertRewardStatus2carStatus($entrust['carRewardStatus'], $entrust['status']);
                 }
@@ -283,9 +283,9 @@ class EntrustController
                 return $response->withJson(AppUnits::rtnMsg(201, $listData['error']));
             }
 
-            if (empty($listData['list'])) {
+            if (!empty($listData['list'])) {
                 foreach ($listData['list'] as $index => $entrust) {
-                    $listData['list'][$index]['carStatus'] = AppUnits::convertRewardStatus2carStatus($entrust['carRewardStatus'], $entrust['entrustStatus']);
+                    $listData['list'][$index]['carStatus'] = AppUnits::convertRewardStatus2carStatus($entrust['rewardStatus'], $entrust['entrustStatus']);
                 }
             }
 
@@ -365,11 +365,12 @@ class EntrustController
 
             $params = array_merge(['pageSize' => 10, 'pageNum' => 1], $params);
 
-            if (isset($params['status'])) {
-                if ($params['status'] != -2) {
-                    $params = array_merge(AppUnits::convertCarStatus2rewardStatus($params['status']), $params);
-                }
-                unset($params['status']);
+            if (isset($params['rewardStatus']) && $params['rewardStatus'] == -2) {
+                unset($params['rewardStatus']);
+            }
+
+            if (isset($params['entrustStatus']) && $params['entrustStatus'] == -2) {
+                unset($params['entrustStatus']);
             }
 
             $entrustModel = new EntrustModel();
@@ -378,12 +379,6 @@ class EntrustController
 
             if (isset($listData['error'])) {
                 return $response->withJson(AppUnits::rtnMsg(201, $listData['error']));
-            }
-
-            if (empty($listData['list'])) {
-                foreach ($listData['list'] as $index => $entrust) {
-                    $listData['list'][$index]['carStatus'] = AppUnits::convertRewardStatus2carStatus($entrust['carRewardStatus'], $entrust['entrustStatus']);
-                }
             }
 
             return $response->withJson(AppUnits::rtnMsg(200, null, $listData));
