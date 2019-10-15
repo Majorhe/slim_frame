@@ -5,12 +5,18 @@
         "slim/twig-view": "^2.0",
         "phpunit/phpunit": "^5.7",
         "phpoffice/phpexcel": "^1.8",
-        "illuminate/database": "~5.1"
+        "illuminate/database": "~5.1",
+        "monolog/monolog": "^1.23"
     },
     "autoload": {
         "psr-4": {
             "": "src/"
         }
+    },
+    "repositories": {
+        "packagist": {
+            "type": "composer",
+            "url": "https://mirrors.aliyun.com/composer/"
+        }
     }
-
 }

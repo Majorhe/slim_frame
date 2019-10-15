@@ -1,10 +1,5 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: shasnhanpc
- * Date: 2018/5/14
- * Time: 11:32
- */
+
 return [
     'settings' => [
         // Slim Settings
@@ -20,5 +15,11 @@ return [
             'collation' => 'utf8_unicode_ci',
             'prefix'    => '',
         ]
+    ],
+    //日志记录
+    'logger' => [
+        'name'  => 'shark_taskmgnt',
+        'level' => \Monolog\Logger::DEBUG,
+        'path'  =>  LOGS_DIR  . 'taskmgnt-'. date('Y-m-d',$_SERVER['REQUEST_TIME']).'.log',
     ],
 ];

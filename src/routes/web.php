@@ -1,10 +1,4 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: shasnhanpc
- * Date: 2018/5/14
- * Time: 11:32
- */
 
 use Slim\Http\Request;
 use Slim\Http\Response;

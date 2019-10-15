@@ -1,10 +1,5 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: shasnhanpc
- * Date: 2018/5/14
- * Time: 11:21
- */
+
 define("DS", DIRECTORY_SEPARATOR);
 define("ROOT", realpath(dirname(__DIR__)) . DS);
 define("VENDORDIR", ROOT . "vendor" . DS);
@@ -51,6 +46,14 @@ $container['db'] = function ($container) use ($config) {
     $capsule->bootEloquent();
 
     return $capsule;
+};
+
+// 日志设置
+$container['logger'] = function () use ($config){
+    $logger = new \Monolog\Logger($config['logger']['name']);
+    $file_handler = new \Monolog\Handler\StreamHandler($config['logger']['path'],$config['logger']['level']);
+    $logger->pushHandler($file_handler);
+    return $logger;
 };
 
 
